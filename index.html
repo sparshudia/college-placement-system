@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>College Placement System</title>
+<style>
+:root{--ink:#14213d;--bg:#f2f4f8;--card:#fff;--line:#d9dee8;--accent:#e8a200;--ok:#1b7f4b;--bad:#b3261e;--mute:#5b6577}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--ink);color:#fff;padding:18px 16px}
+header h1{margin:0;font-size:1.3rem}
+header p{margin:2px 0 0;color:#c4cce0;font-size:.9rem}
+main{max-width:900px;margin:0 auto;padding:16px}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tabs button{flex:1;padding:12px;border:2px solid var(--ink);background:#fff;color:var(--ink);font-weight:600;border-radius:6px;cursor:pointer}
+.tabs button.on{background:var(--ink);color:#fff}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.stats div{background:var(--card);border-left:4px solid var(--accent);padding:10px 12px}
+.stats b{font-size:1.4rem;display:block}
+.stats span{font-size:.8rem;color:var(--mute)}
+section{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:16px}
+h2{margin:0 0 12px;font-size:1.1rem}
+label{display:block;font-size:.85rem;font-weight:600;margin:10px 0 4px}
+input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;font:inherit}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{background:var(--ink);color:#fff;border:0;padding:10px 16px;border-radius:6px;font:inherit;font-weight:600;cursor:pointer;margin-top:12px}
+.btn.alt{background:var(--accent);color:var(--ink)}
+.btn:disabled{background:#aab1c0;cursor:not-allowed}
+.btn:focus-visible,input:focus-visible,select:focus-visible,.tabs button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.item{border-top:1px solid var(--line);padding:12px 0}
+.item:first-of-type{border-top:0}
+.item h3{margin:0;font-size:1rem}
+.meta{color:var(--mute);font-size:.88rem}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:.78rem;font-weight:700;background:#e6e9f1}
+.tag.Selected{background:#d5f0e1;color:var(--ok)}
+.tag.Rejected{background:#fadbd8;color:var(--bad)}
+.tag.Shortlisted{background:#fff0c4;color:#7a5600}
+.empty{color:var(--mute);padding:8px 0}
+#msg{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:6px;display:none;max-width:90%}
+@media(max-width:520px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>College Placement System</h1><p>Medi-Caps University · Training &amp; Placement Cell</p></header>
+<main>
+<div class="tabs" role="tablist">
+ <button id="tS" class="on" onclick="setRole('student')">Student</button>
+ <button id="tA" onclick="setRole('admin')">Placement Officer</button>
+</div>
+<div class="stats">
+ <div><b id="sD">0</b><span>Drives open</span></div>
+ <div><b id="sA">0</b><span>Applications</span></div>
+ <div><b id="sP">0</b><span>Students placed</span></div>
+</div>
+<div id="app"></div>
+</main>
+<div id="msg" role="status"></div>
+<script>
+var KEY='cps_data_v1', role='student', D;
+function seed(){return{
+ student:{name:'Sourabh Rajput',enroll:'EN24CS3011016',cgpa:8.4},
+ drives:[
+  {id:1,company:'TCS',role:'Software Engineer',pkg:'7 LPA',cgpa:6.5,last:'2026-12-20'},
+  {id:2,company:'Infosys',role:'Systems Engineer',pkg:'6.5 LPA',cgpa:6.0,last:'2026-12-28'},
+  {id:3,company:'Product Startup',role:'Backend Developer',pkg:'12 LPA',cgpa:8.5,last:'2027-01-10'}],
+ apps:[]}}
+function load(){try{var s=localStorage.getItem(KEY);D=s?JSON.parse(s):seed()}catch(e){D=seed()}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){}}
+function toast(t){var m=document.getElementById('msg');m.textContent=t;m.style.display='block';setTimeout(function(){m.style.display='none'},2400)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function setRole(r){role=r;document.getElementById('tS').className=r=='student'?'on':'';document.getElementById('tA').className=r=='admin'?'on':'';render()}
+function drive(id){return D.drives.find(function(d){return d.id==id})}
+function applied(id){return D.apps.some(function(a){return a.driveId==id&&a.enroll==D.student.enroll})}
+function saveProfile(){
+ var n=v('pn').trim(),e=v('pe').trim(),c=parseFloat(v('pc'));
+ if(!n||!e||isNaN(c)||c<0||c>10){toast('Enter name, enrollment and CGPA (0–10)');return}
+ D.student={name:n,enroll:e,cgpa:c};save();toast('Profile saved');render()}
+function v(id){return document.getElementById(id).value}
+function apply(id){
+ var d=drive(id);
+ if(D.student.cgpa<d.cgpa){toast('Not eligible: minimum CGPA is '+d.cgpa);return}
+ if(applied(id)){toast('Already applied');return}
+ D.apps.push({id:Date.now(),driveId:id,enroll:D.student.enroll,name:D.student.name,cgpa:D.student.cgpa,status:'Applied'});
+ save();toast('Applied to '+d.company);render()}
+function addDrive(){
+ var c=v('dc').trim(),r=v('dr').trim(),p=v('dp').trim(),g=parseFloat(v('dg')),l=v('dl');
+ if(!c||!r||!p||isNaN(g)||!l){toast('Fill all the drive details');return}
+ D.drives.push({id:Date.now(),company:c,role:r,pkg:p,cgpa:g,last:l});save();toast('Drive posted');render()}
+function delDrive(id){D.drives=D.drives.filter(function(d){return d.id!=id});D.apps=D.apps.filter(function(a){return a.driveId!=id});save();render()}
+function setStatus(id,s){D.apps.find(function(a){return a.id==id}).status=s;save();toast('Status: '+s);render()}
+function stats(){
+ document.getElementById('sD').textContent=D.drives.length;
+ document.getElementById('sA').textContent=D.apps.length;
+ var p={};D.apps.forEach(function(a){if(a.status=='Selected')p[a.enroll]=1});
+ document.getElementById('sP').textContent=Object.keys(p).length}
+function studentView(){
+ var s=D.student,h='<section><h2>My profile</h2><div class="row"><div><label for="pn">Name</label><input id="pn" value="'+esc(s.name)+'"></div><div><label for="pe">Enrollment no.</label><input id="pe" value="'+esc(s.enroll)+'"></div></div><label for="pc">CGPA</label><input id="pc" type="number" step="0.1" min="0" max="10" value="'+s.cgpa+'"><button class="btn" onclick="saveProfile()">Save profile</button></section>';
+ h+='<section><h2>Open drives</h2>';
+ if(!D.drives.length)h+='<p class="empty">No drives yet. Check back soon.</p>';
+ D.drives.forEach(function(d){
+  var ok=s.cgpa>=d.cgpa,ap=applied(d.id);
+  h+='<div class="item"><h3>'+esc(d.company)+' — '+esc(d.role)+'</h3><div class="meta">'+esc(d.pkg)+' · Min CGPA '+d.cgpa+' · Apply by '+esc(d.last)+'</div><button class="btn alt" '+((!ok||ap)?'disabled':'')+' onclick="apply('+d.id+')">'+(ap?'Applied':ok?'Apply now':'Not eligible')+'</button></div>'});
+ h+='</section><section><h2>My applications</h2>';
+ var mine=D.apps.filter(function(a){return a.enroll==s.enroll});
+ if(!mine.length)h+='<p class="empty">You haven\'t applied anywhere yet. Pick a drive above.</p>';
+ mine.forEach(function(a){var d=drive(a.driveId);h+='<div class="item"><h3>'+(d?esc(d.company):'Removed drive')+'</h3><span class="tag '+a.status+'">'+a.status+'</span></div>'});
+ return h+'</section>'}
+function adminView(){
+ var h='<section><h2>Post a new drive</h2><div class="row"><div><label for="dc">Company</label><input id="dc"></div><div><label for="dr">Job role</label><input id="dr"></div><div><label for="dp">Package (e.g. 8 LPA)</label><input id="dp"></div><div><label for="dg">Minimum CGPA</label><input id="dg" type="number" step="0.1" min="0" max="10"></div></div><label for="dl">Last date to apply</label><input id="dl" type="date"><button class="btn" onclick="addDrive()">Post drive</button></section>';
+ h+='<section><h2>Drives and applicants</h2>';
+ if(!D.drives.length)h+='<p class="empty">No drives posted. Add one above.</p>';
+ D.drives.forEach(function(d){
+  var list=D.apps.filter(function(a){return a.driveId==d.id});
+  h+='<div class="item"><h3>'+esc(d.company)+' — '+esc(d.role)+'</h3><div class="meta">'+esc(d.pkg)+' · Min CGPA '+d.cgpa+' · '+list.length+' applicant(s)</div>';
+  list.forEach(function(a){h+='<div style="margin-top:8px"><b>'+esc(a.name)+'</b> <span class="meta">('+esc(a.enroll)+', CGPA '+a.cgpa+')</span> <span class="tag '+a.status+'">'+a.status+'</span><select aria-label="Change status" onchange="setStatus('+a.id+',this.value)" style="margin-top:6px">'+['Applied','Shortlisted','Selected','Rejected'].map(function(s){return'<option'+(s==a.status?' selected':'')+'>'+s+'</option>'}).join('')+'</select></div>'});
+  h+='<button class="btn" style="background:var(--bad)" onclick="delDrive('+d.id+')">Remove drive</button></div>'});
+ return h+'</section>'}
+function render(){stats();document.getElementById('app').innerHTML=role=='student'?studentView():adminView()}
+load();render();
+</script>
+</body>
+</html>
